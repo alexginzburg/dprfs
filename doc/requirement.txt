@@ -34,3 +34,6 @@ General design:
 
   Data recovery:
     we should have parity bits set on each data block so we can reconstruct entire file even if few data blocks are missing/inaccessible.
+
+  Monitoring:
+    we should have a built-in monitoring that logs basic metrics ( cpu, disk io, network io ). Given these metrics we should be able to identify bottlenecks in the client setup and provide quick solutions to optimize their system. ( *** Consulting fees *** )
