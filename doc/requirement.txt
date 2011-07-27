@@ -1,0 +1,30 @@
+Filesystem compatibility semantics that we will need to support:
+  1. touch
+  2. mkdir
+  3. cp
+  4. mv
+  5. softlink
+  6. hardlink
+  7. rm
+  8. advisory locks
+  9. ownership (user:group)
+  10. permission (rwx rwx rwx)
+
+General design:
+
+  filesystem driver on a client host.
+    driver configuration set the network address of the storage system
+
+  storage units
+
+  divide data into blocks, hash the block. based on the hash decide which storage units will have it.
+  During write, the quorum need to be established only among that host that store the hashes in questions.
+  Metadata is the mapping between filename hash and data block hashes. During the remove or write operation some data blocks get orphant,
+  the actual data removal (cleanup) can happen async (when we have idle cycles).
+  
+  Read:
+    is the udp (or something as cheap) request is sent to storage network to figure out which hosts have data blocks for a file in question.
+  The metadata storage implementation could be a DNS infrastructure.
+
+  Write:
+   the write is more involved. We need to preserve an order the data is coming in (multiple clients can write to the same file). 
