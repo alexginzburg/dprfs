@@ -37,3 +37,30 @@ General design:
 
   Monitoring:
     we should have a built-in monitoring that logs basic metrics ( cpu, disk io, network io ). Given these metrics we should be able to identify bottlenecks in the client setup and provide quick solutions to optimize their system. ( *** Consulting fees *** )
+
+
+
+  +--------+
+  | client |----- NETWORK-A
+  +--------+	    
+      |		    
+  +---------+	+--------+
+  | storage |---| client |----- NETWORK-B
+  | switch  |	+--------+
+  +---------+
+    | |	| |
+    | |	| +--------------+
+    | |	| | storage unit |
+    | |	| +--------------+
+    | | |
+    | |	+--------------+
+    | |	| storage unit |
+    | |	+--------------+
+    | |
+    | +--------------+
+    | | storage unit |
+    | +--------------+
+    |
+    +--------------+
+    | storage unit |
+    +--------------+
