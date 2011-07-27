@@ -28,3 +28,9 @@ General design:
 
   Write:
    the write is more involved. We need to preserve an order the data is coming in (multiple clients can write to the same file). 
+
+  Replication:
+    during update operations (write/remove) data is replication to all hosts that store a given data block.
+
+  Data recovery:
+    we should have parity bits set on each data block so we can reconstruct entire file even if few data blocks are missing/inaccessible.
