@@ -1,0 +1,10 @@
+__Data Protocol__
+1. open() of the existing file records the current HEAD in the file structure.
+  when write() the file back, we should only send a diff.
+  when sending data over the wire we can send the starting hash and the diff.
+
+what happens when there is a conflict applying the patch.
+
+how can we implement mmap()?
+
+writing data at address.
