@@ -1,0 +1,29 @@
+content packet
+
+	location hash
+	parent content hash - the digest of the content that when we opened a file
+	content chunk id
+	content chunk parent hash
+	content chunk hash
+	content data
+
+
+when server receives the content packet
+  1. writes it into a journal log
+  2. if parent hash and current data hash match then it apply the data to the target file
+	and updates the current hash
+  3. if parent hash does not match then the data remains in the journal
+	host should contact neighboring host to get the missing content chunk(s)
+  4. if content chunk applied cleanly the the target file, the entry should be remove from a journal
+
+
+
+Hashing
+  1. each filesystem has its own hash seed.
+	hash seed is set during configuration
+	it can be changed but the entire filesystem tree needs tbe re-checked.
+
+
+Deduplication
+  1. store hash of a data block
+
