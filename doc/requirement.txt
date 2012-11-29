@@ -1,13 +1,13 @@
 Filesystem compatibility semantics that we will need to support:
-  1. touch
-  2. mkdir
-  3. cp
-  4. mv
-  5. softlink
-  6. hardlink
-  7. rm
-  8. advisory locks
-  9. ownership (user:group)
+  01. touch
+  02. mkdir
+  03. cp
+  04. mv
+  05. softlink
+  06. hardlink
+  07. rm
+  08. advisory locks
+  09. ownership (user:group)
   10. permission (rwx rwx rwx)
 
 General design:
@@ -17,17 +17,14 @@ General design:
 
   storage units
 
-  divide data into blocks, hash the block. based on the hash decide which storage units will have it.
-  During write, the quorum need to be established only among that host that store the hashes in questions.
   Metadata is the mapping between filename hash and data block hashes. During the remove or write operation some data blocks get orphant,
   the actual data removal (cleanup) can happen async (when we have idle cycles).
   
   Read:
-    is the udp (or something as cheap) request is sent to storage network to figure out which hosts have data blocks for a file in question.
-  The metadata storage implementation could be a DNS infrastructure.
+    request is sent to storage network to figure out which hosts have data blocks for a file in question.
 
   Write:
-   the write is more involved. We need to preserve an order the data is coming in (multiple clients can write to the same file). 
+   need to preserve an order the data is coming in (multiple clients can write to the same file). 
 
   Replication:
     during update operations (write/remove) data is replication to all hosts that store a given data block.
@@ -36,7 +33,8 @@ General design:
     we should have parity bits set on each data block so we can reconstruct entire file even if few data blocks are missing/inaccessible.
 
   Monitoring:
-    we should have a built-in monitoring that logs basic metrics ( cpu, disk io, network io ). Given these metrics we should be able to identify bottlenecks in the client setup and provide quick solutions to optimize their system. ( *** Consulting fees *** )
+    we should have a built-in monitoring that logs basic metrics ( cpu, disk io, network io ).
+    Given these metrics we should be able to identify bottlenecks in the client setup and provide quick solutions to optimize their system.
 
 
 
