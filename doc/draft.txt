@@ -7,18 +7,18 @@ what happens when there is a conflict applying the patch.
 
 how can we implement mmap()?
 
-writing data at address.
-
+writing data at address (seek).
 
 =============================
 content packet
 
-	location hash
-	parent content hash - the digest of the content that when we opened a file
-	content chunk id
-	content chunk parent hash
+	mount hash
+	location hash (directory)
+	parent content hash - the digest of the content when we opened afile
+	client identification
+	content chunk parent hash (previous chunk hash. directed cyclical graph)
 	content chunk hash
-	content data
+	content data (data length adjusts based on the MTU size)
 
 
 when server receives the content packet
@@ -28,7 +28,6 @@ when server receives the content packet
   3. if parent hash does not match then the data remains in the journal
 	host should contact neighboring host to get the missing content chunk(s)
   4. if content chunk applied cleanly the the target file, the entry should be remove from a journal
-
 
 
 Hashing
@@ -41,3 +40,12 @@ Deduplication
   1. store hash of a data block
 
 P2P for clients on the same network???
+
+
+m: mount_hash \n
+l: directory_hash \n
+o: start_hash \n
+a: client identification \n
+p: previous_data_chunk_bash \n
+h: data_chunk_hash \n
+d: data
