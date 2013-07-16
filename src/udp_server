@@ -1,11 +1,58 @@
 #!/usr/bin/env python
 
+import os
 import sys
 import socket
 import struct
+import json
+import hashlib
 
 network_group = sys.argv[1]
 network_port = int(sys.argv[2])
+
+def _ls( dirname ):
+	if dirname is None:
+		dirname = './'
+	return os.listdir( dirname )
+
+def _open( filename ):
+	if filename is None:
+		return []
+	out = {
+		'id':		uuid.uuid4().hex,
+		'filename':	filename,
+		'top':		hashlib.sha512(filename).hexdigest()
+	}
+
+def _stat( filename ):
+	if filename is None:
+		filename = '.'
+	return str(os.stat(filename))
+
+def _mv():
+	pass
+
+def _cp():
+	pass
+
+def _ln():
+	pass
+
+def _read():
+	pass
+
+def _close():
+	pass
+	
+command = {
+	'ls': 		_ls,
+	'open':		_open,
+	'mv':		_mv,
+	'cp':		_cp,
+	'ln':		_ln,
+	'stat':		_stat,
+	'read':		_read,
+}
 
 s = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 s.bind( ('', network_port) )
@@ -14,9 +61,18 @@ mreq = struct.pack( '4sL', group, socket.INADDR_ANY )
 s.setsockopt( socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq )
 
 while 1:
-	msg_in, remote_addr = s.recvfrom( 512 )
+	msg_in, remote_addr = s.recvfrom( 4096 )
+
 	print "received='%s' from '%s'" % ( msg_in, remote_addr )
-	msg_out = msg_in
-	s.sendto( msg_out, remote_addr )
+	msg_out = json.loads( msg_in )
+
+	argument = msg_out.get( 'argument', None )
+	msg_out['result'] = command[msg_out['command']](argument)
+
+	msg_out['pid'] = os.getpid()
+	msg_out['host'] = socket.gethostname()
+
+	s.sendto( json.dumps( msg_out ), remote_addr )
+
 s.close()
 sys.exit(0)

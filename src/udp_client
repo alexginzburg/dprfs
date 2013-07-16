@@ -6,27 +6,46 @@ import socket
 import select
 import struct
 import json
+import time
+import uuid
 
-message = {}
-message['msg'] = "from client"
-message['pid'] = os.getpid()
+message = {
+	'id':		uuid.uuid4().hex,
+	'pid':		os.getpid(),
+	'client_id':	uuid.uuid4().hex,
+	'auth':		uuid.uuid4().hex,
+	'command':	'stat',
+	'argument':	'udp_client'
+}
 
 network_address = sys.argv[1]
 network_port = int(sys.argv[2])
 
+cmd = sys.argv[3]
+cmd_arg = sys.argv[4]
+
+if not cmd is None:
+	message['command'] = cmd
+	message['argument'] = cmd_arg
+
 s = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 
-s.settimeout( 0.2 )
 
 ttl = struct.pack( 'b', 1 )
 s.setsockopt( socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl )
 
 sent = s.sendto( json.dumps(message), ( network_address, network_port ) )
-print >> sys.stderr, "sent='%s'" % sent
-r_s, _, _ = select.select( [ s ], [], [] )
-for r in r_s:
-	msg_in, sender_addr = r.recvfrom(512)
-	print "msg_in='%s'\n" % msg_in
+s.settimeout( 0.5 )
+start = time.time()
+
+while 1:
+	try:
+		msg_in, sender_addr = s.recvfrom( 4096 )
+	except socket.timeout, ex:
+		print >> sys.stderr, "socket.timeout %s" % ex
+		break
+	else:
+		print "after %.5f msg_in='%s'\n" % ( (time.time() - start), msg_in )
 s.close()
 sys.exit(0)
 
