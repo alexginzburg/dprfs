@@ -1,0 +1,22 @@
+#!/usr/bin/env python
+
+import sys
+import socket
+import struct
+
+network_group = sys.argv[1]
+network_port = int(sys.argv[2])
+
+s = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
+s.bind( ('', network_port) )
+group = socket.inet_aton( network_group )
+mreq = struct.pack( '4sL', group, socket.INADDR_ANY )
+s.setsockopt( socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq )
+
+while 1:
+	msg_in, remote_addr = s.recvfrom( 512 )
+	print "received='%s' from '%s'" % ( msg_in, remote_addr )
+	msg_out = msg_in
+	s.sendto( msg_out, remote_addr )
+s.close()
+sys.exit(0)
