@@ -13,7 +13,10 @@ writing data at address (seek).
 content packet
 
 	mount hash
-	location hash (directory)
+	location hash (directory and name)
+	operation (open, cp, mv, write, read, etc.) 
+	destination location (optional)
+	metadata (optional)
 	parent content hash - the digest of the content when we opened afile
 	client identification
 	content chunk parent hash (previous chunk hash. directed cyclical graph)
@@ -44,8 +47,23 @@ P2P for clients on the same network???
 
 m: mount_hash \n
 l: directory_hash \n
+a: action/operation \n
 o: start_hash \n
 a: client identification \n
 p: previous_data_chunk_bash \n
 h: data_chunk_hash \n
 d: data
+
+
+software components
+  1. service dispatcher
+   services:
+     public_manager (talks to storage clients)
+     fsync_manager ( applies journal to data files )
+     node_data_sync
+     node_request_argeement ( negotiates with other data nodes on who has the latest data )
+     
+node functions:
+  authenticate with the storage network
+  discover existing nodes
+  

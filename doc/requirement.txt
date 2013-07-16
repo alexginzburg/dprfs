@@ -21,7 +21,7 @@ General design:
   the actual data removal (cleanup) can happen async (when we have idle cycles).
   
   Read:
-    request is sent to storage network to figure out which hosts have data blocks for a file in question.
+    request is sent to a storage network to figure out which hosts have data blocks for a file in question.
 
   Write:
    need to preserve an order the data is coming in (multiple clients can write to the same file). 
