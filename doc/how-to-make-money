@@ -1,0 +1,6 @@
+The server and a client can be open sourced (GPL3).
+We can make money on:
+1. provide a client hardware card, offloading the computation, higher throughput.
+2. admin UI, gives a point and click interface. Provides health graphs
+3. cross data centers replication. The internet connection can be lossy and route are unknown.
+   Going with UDP across might require us do more work, we should consider TCP 
