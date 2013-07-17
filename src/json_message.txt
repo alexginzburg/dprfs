@@ -1,0 +1,23 @@
+request:
+{
+	"request_id":		uuid.hex()
+	"client":		hash,
+	"auth":			hash,
+	"current_hash":		hash,
+	"cwd":			path,
+	"command":		<enum>,
+	"command_argument":	args,
+	"directory":		path,
+	"filename":		filename,
+	"destination_directory":	path,
+	"destination_filename":		filename,
+}
+
+response:
+{
+	"host": "hostname",
+	"host_hash": "foo",
+	"top": "latest revision",
+	"base": "first revision",
+
+}
