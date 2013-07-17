@@ -23,6 +23,7 @@ while 1:
 	msg_in, remote_addr = s.recvfrom( buffer_size )
 
 	print "received='%s' from '%s'" % ( msg_in, remote_addr )
+	s.sendto( msg_in, remote_addr )
 
 
 s.close()
