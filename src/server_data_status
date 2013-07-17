@@ -6,9 +6,18 @@ import socket
 import struct
 import json
 import hashlib
+import ConfigParser
 
-network_group = sys.argv[1]
-network_port = int(sys.argv[2])
+config = ConfigParser.ConfigParser()
+config.read( 'server.conf' )
+
+buffer_size	= config.getint( 'general', 'buffer_size' )
+
+network_group 	= config.get( 'status', 'network_group' )
+network_port 	= config.getint( 'status', 'network_port' )
+
+data_address	= config.get( 'data', 'network_address' )
+data_port	= config.getint( 'data', 'network_port' )
 
 def _ls( dirname ):
 	if dirname is None:
@@ -61,7 +70,7 @@ mreq = struct.pack( '4sL', group, socket.INADDR_ANY )
 s.setsockopt( socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq )
 
 while 1:
-	msg_in, remote_addr = s.recvfrom( 4096 )
+	msg_in, remote_addr = s.recvfrom( buffer_size )
 
 	print "received='%s' from '%s'" % ( msg_in, remote_addr )
 	msg_out = json.loads( msg_in )
@@ -70,7 +79,7 @@ while 1:
 	msg_out['result'] = command[msg_out['command']](argument)
 
 	msg_out['pid'] = os.getpid()
-	msg_out['host'] = socket.gethostname()
+	msg_out['host'] = (data_address, data_port)
 
 	s.sendto( json.dumps( msg_out ), remote_addr )
 

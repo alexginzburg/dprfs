@@ -8,6 +8,11 @@ import struct
 import json
 import time
 import uuid
+import ConfigParser
+
+config = ConfigParser.ConfigParser()
+config.read( 'client.conf' )
+
 
 message = {
 	'id':		uuid.uuid4().hex,
@@ -18,11 +23,14 @@ message = {
 	'argument':	'udp_client'
 }
 
-network_address = sys.argv[1]
-network_port = int(sys.argv[2])
+network_address	= config.get( 'client', 'network_address' )
+network_port	= config.getint( 'client', 'network_port' )
+status_timeout	= config.getfloat( 'client', 'status_timeout' )
+data_timeout	= config.getfloat( 'client', 'data_timeout' )
+buffer_size	= config.getint( 'client', 'buffer_size' )
 
-cmd = sys.argv[3]
-cmd_arg = sys.argv[4]
+cmd = sys.argv[1]
+cmd_arg = sys.argv[2]
 
 if not cmd is None:
 	message['command'] = cmd
@@ -35,17 +43,20 @@ ttl = struct.pack( 'b', 1 )
 s.setsockopt( socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl )
 
 sent = s.sendto( json.dumps(message), ( network_address, network_port ) )
-s.settimeout( 0.5 )
+s.settimeout( status_timeout )
 start = time.time()
 
 while 1:
 	try:
-		msg_in, sender_addr = s.recvfrom( 4096 )
+		msg_in, sender_addr = s.recvfrom( buffer_size )
 	except socket.timeout, ex:
 		print >> sys.stderr, "socket.timeout %s" % ex
 		break
 	else:
 		print "after %.5f msg_in='%s'\n" % ( (time.time() - start), msg_in )
+		response = json.loads(msg_in)
+		s.settimeout( data_timeout )
+		s.sendto( json.dumps(message), ( response['host'][0], response['host'][1] ) )
 s.close()
 sys.exit(0)
 
