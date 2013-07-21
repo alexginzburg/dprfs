@@ -15,6 +15,7 @@ buffer_size	= config.getint( 'general', 'buffer_size' )
 
 network_group 	= config.get( 'status', 'network_group' )
 network_port 	= config.getint( 'status', 'network_port' )
+meta_root	= config.get( 'status', 'meta_root' )
 
 data_address	= config.get( 'data', 'network_address' )
 data_port	= config.getint( 'data', 'network_port' )
@@ -24,14 +25,18 @@ def _ls( dirname ):
 		dirname = './'
 	return os.listdir( dirname )
 
-def _open( filename ):
+def _open( filename = None ):
+	response = []
 	if filename is None:
-		return []
-	out = {
-		'id':		uuid.uuid4().hex,
-		'filename':	filename,
-		'top':		hashlib.sha512(filename).hexdigest()
-	}
+		return response
+	os.chdir(meta_root)
+	os.chdir(filename)
+	while os.listdir('./'):
+		d_l = os.listdir('./')
+		for d in d_l:
+		  response.append( d )
+		  os.chdir(d)
+	return response
 
 def _stat( filename ):
 	if filename is None:
@@ -76,12 +81,20 @@ while 1:
 	msg_out = json.loads( msg_in )
 
 	argument = msg_out.get( 'argument', None )
-	msg_out['result'] = command[msg_out['command']](argument)
+	result = []
+	result = command[msg_out['command']](argument)
+	while result:
+		msg_out['result'] = []
+		for i in range(10):
+			try:
+				msg_out['result'].append(result.pop())
+			except IndexError, ex:
+				pass
 
-	msg_out['pid'] = os.getpid()
-	msg_out['host'] = (data_address, data_port)
+		msg_out['pid'] = os.getpid()
+		msg_out['host'] = (data_address, data_port)
 
-	s.sendto( json.dumps( msg_out ), remote_addr )
+		s.sendto( json.dumps( msg_out ), remote_addr )
 
 s.close()
 sys.exit(0)
