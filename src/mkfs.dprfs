@@ -13,6 +13,9 @@ buffer_size	= config.getint( 'general', 'buffer_size' )
 meta_root	= config.get( 'status', 'meta_root' )
 data_root	= config.get( 'data', 'data_root' )
 
+top  = None
+base = None
+
 cwd = os.getcwd()
 
 fn = sys.argv[1]
@@ -34,6 +37,9 @@ while True:
   if r == '':
     break
   c = hashlib.sha1(r).hexdigest()
+  if not base:
+    base = c
+  top = c
 
   dirname = c[:4]
   dirname = "%s/%s" % ( data_root, dirname )
@@ -54,3 +60,13 @@ while True:
     pass
 
 os.chdir(cwd)
+
+link_name = os.path.join( path, 'base' )
+t_link_name = "%s.%s" % ( link_name, os.getpid() )
+os.symlink( base, t_link_name )
+os.rename( t_link_name, link_name )
+
+link_name = os.path.join( path, 'top' )
+t_link_name = "%s.%s" % ( link_name, os.getpid() )
+os.symlink( top, t_link_name )
+os.rename( t_link_name, link_name )

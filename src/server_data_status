@@ -31,11 +31,8 @@ def _open( filename = None ):
 		return response
 	os.chdir(meta_root)
 	os.chdir(filename)
-	while os.listdir('./'):
-		d_l = os.listdir('./')
-		for d in d_l:
-		  response.append( d )
-		  os.chdir(d)
+	response.append( {'base': os.readlink('base')} )
+	response.append( {'top': os.readlink('top')} )
 	return response
 
 def _stat( filename ):
