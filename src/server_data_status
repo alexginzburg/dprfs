@@ -29,10 +29,11 @@ def _open( filename = None ):
 	response = []
 	if filename is None:
 		return response
-	os.chdir(meta_root)
-	os.chdir(filename)
-	response.append( {'base': os.readlink('base')} )
-	response.append( {'top': os.readlink('top')} )
+	os.chdir(os.path.join(meta_root, filename))
+	response.append( {
+		'base': os.readlink('base'),
+		'top': os.readlink('top')
+	} )
 	return response
 
 def _stat( filename ):
