@@ -10,9 +10,45 @@ import time
 import uuid
 import ConfigParser
 
-config = ConfigParser.ConfigParser()
-config.read( 'client.conf' )
+#from client import dprf_open
 
+message = {
+        'id':           uuid.uuid4().hex,
+        'pid':          os.getpid(),
+        'client_id':    uuid.uuid4().hex,
+        'auth':         uuid.uuid4().hex,
+}
+
+def dprf_open( s, filename = None ):
+
+	message['command'] = 'open'
+	message['argument'] = filename
+
+	sent = s.sendto( json.dumps(message), ( network_address, network_port ) )
+	s.settimeout( status_timeout )
+	start = time.time()
+
+	try:
+		msg_in, sender_addr = s.recvfrom( buffer_size )
+	except socket.timeout, ex:
+		print >> sys.stderr, "socket.timeout %s" % ex
+		break
+	else:
+		print "after %.5f msg_in='%s'\n" % ( (time.time() - start), msg_in )
+		response = json.loads(msg_in)
+
+def dprfs_read ( s, fd ):
+
+	while True:
+		s.settimeout( data_timeout )
+		s.sendto( json.dumps(message), ( response['host'][0], response['host'][1] ) )
+		msg_in, sender_addr = s.recvfrom( buffer_size )
+		current = msg_in['result']['current']
+		top = msg_in['result']['top']
+
+		yield msg_in['result']['data']
+		if current == top:
+			return 'DPRFS_EOF'
 
 message = {
 	'id':		uuid.uuid4().hex,
@@ -22,6 +58,19 @@ message = {
 	'command':	'stat',
 	'argument':	'udp_client'
 }
+
+command = {
+        'ls':           _ls,
+        'open':         dprfs_open,
+        'read':         dprfs_read,
+        'mv':           _mv,
+        'cp':           _cp,
+        'ln':           _ln,
+        'stat':         _stat,
+}
+
+config = ConfigParser.ConfigParser()
+config.read( 'client.conf' )
 
 network_address	= config.get( 'client', 'network_address' )
 network_port	= config.getint( 'client', 'network_port' )
@@ -38,25 +87,12 @@ if not cmd is None:
 
 s = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 
-
 ttl = struct.pack( 'b', 1 )
 s.setsockopt( socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl )
 
-sent = s.sendto( json.dumps(message), ( network_address, network_port ) )
-s.settimeout( status_timeout )
-start = time.time()
-
-while 1:
-	try:
-		msg_in, sender_addr = s.recvfrom( buffer_size )
-	except socket.timeout, ex:
-		print >> sys.stderr, "socket.timeout %s" % ex
-		break
-	else:
-		print "after %.5f msg_in='%s'\n" % ( (time.time() - start), msg_in )
-		response = json.loads(msg_in)
-		s.settimeout( data_timeout )
-		s.sendto( json.dumps(message), ( response['host'][0], response['host'][1] ) )
+result = dprfs_open(s, argument)
+while True:
+	r = dprfs_read( s, result )
 s.close()
 sys.exit(0)
 
