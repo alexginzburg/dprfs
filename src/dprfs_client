@@ -32,7 +32,7 @@ buffer_size	= config.getint( 'client', 'buffer_size' )
 def dprfs_open( s, filename = None ):
 
 	message['command'] = 'open'
-	message['argument'] = filename
+	message['filename'] = filename
 
 	sent = s.sendto( json.dumps(message), ( network_address, network_port ) )
 	s.settimeout( status_timeout )

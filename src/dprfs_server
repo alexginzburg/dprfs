@@ -3,6 +3,7 @@
 import os
 import sys
 import socket
+import select
 import struct
 import json
 import hashlib
@@ -36,6 +37,9 @@ def _open( filename = None ):
 	} )
 	return response
 
+def _read():
+	pass
+
 def _stat( filename ):
 	if filename is None:
 		filename = '.'
@@ -48,9 +52,6 @@ def _cp():
 	pass
 
 def _ln():
-	pass
-
-def _read():
 	pass
 
 def _close():
@@ -72,8 +73,13 @@ group = socket.inet_aton( network_group )
 mreq = struct.pack( '4sL', group, socket.INADDR_ANY )
 s.setsockopt( socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq )
 
+ds = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
+ds.bind( ( data_address, data_port) )
+
 while 1:
-	msg_in, remote_addr = s.recvfrom( buffer_size )
+
+	read, _, _ = select.select( [ s, ds ], [], [] )
+	msg_in, remote_addr = read[0].recvfrom( buffer_size )
 
 	print "received='%s' from '%s'" % ( msg_in, remote_addr )
 	msg_out = json.loads( msg_in )
