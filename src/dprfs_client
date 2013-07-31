@@ -15,8 +15,6 @@ import ConfigParser
 message = {
         'id':           uuid.uuid4().hex,
         'pid':          os.getpid(),
-        'client_id':    uuid.uuid4().hex,
-        'auth':         uuid.uuid4().hex,
 }
 
 config = ConfigParser.ConfigParser()
@@ -45,12 +43,13 @@ def dprfs_open( s, filename = None ):
 		raise ex
 	print "=== elapse %.5f" % ( time.time() - start )
 	print "=== msg_in='%s'" % msg_in 
-	response = json.loads(msg_in)
+
+	return json.loads(msg_in)
 
 def dprfs_read ( s, fd ):
 
 	fd['command'] = 'read'
-	fd['request'] = fd['result']['bsae'] 
+	fd['request'] = fd['result']['base'] 
 	while True:
 		s.settimeout( data_timeout )
 		s.sendto( json.dumps(fd), ( fd['host'][0], fd['host'][1] ) )
@@ -67,7 +66,8 @@ def dprfs_read ( s, fd ):
 		top = response['result']['top']
 		fd['request'] = response['result']['next']
 
-		yield response['result']['data']
+		return response['result']['data']
+
 		if current == top:
 			return
 
@@ -86,8 +86,7 @@ s.setsockopt( socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl )
 
 result = dprfs_open(s, cmd)
 r = dprfs_read( s, result )
-for d in r:
-	print d
+print r
 s.close()
 sys.exit(0)
 

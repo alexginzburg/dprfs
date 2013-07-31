@@ -8,6 +8,7 @@ import struct
 import json
 import hashlib
 import ConfigParser
+import cPickle as pickle
 
 config = ConfigParser.ConfigParser()
 config.read( 'server.conf' )
@@ -20,13 +21,14 @@ meta_root	= config.get( 'status', 'meta_root' )
 
 data_address	= config.get( 'data', 'network_address' )
 data_port	= config.getint( 'data', 'network_port' )
+data_root	= config.get( 'data', 'data_root' )
 
 def _ls( dirname ):
 	if dirname is None:
 		dirname = './'
 	return os.listdir( dirname )
 
-def _open( filename = None ):
+def _open( filename = None, fd = {} ):
 	response = []
 	if filename is None:
 		return response
@@ -37,8 +39,36 @@ def _open( filename = None ):
 	} )
 	return response
 
-def _read():
-	pass
+def _read( filename = None, fd = {} ):
+	response = []
+	request = fd['request']
+	if filename is None:
+		return response
+	os.chdir(os.path.join(meta_root, filename))
+	file_list = os.listdir('./')
+	file_list.remove('base')
+	file_list.remove('top') 
+	file_inspect = file_list[0]
+	
+	while True:
+		if request == file_inspect:
+			os.chdir(request)
+			next = os.listdir('./')[0]
+
+			filename = os.path.join( data_root, request[:4], request ) 
+			df = open(filename, "r")
+			response.append( {
+				'next': next,
+				'data': pickle.dumps(df.read( buffer_size )),
+			} )
+			break
+		else:
+			print >> sys.stderr, "=== file_inspect='%s'" % file_inspect
+			if isinstance(file_inspect, list):
+				file_inspect = file_inspect.pop()
+			os.chdir(file_inspect)
+			file_inspect = os.listdir('./')
+	return response
 
 def _stat( filename ):
 	if filename is None:
@@ -85,20 +115,18 @@ while 1:
 	msg_out = json.loads( msg_in )
 
 	argument = msg_out.get( 'argument', None )
+	filename = msg_out.get( 'filename', None )
 	result = []
-	result = command[msg_out['command']](argument)
-	while result:
-		msg_out['result'] = []
-		for i in range(10):
-			try:
-				msg_out['result'].append(result.pop())
-			except IndexError, ex:
-				pass
+	result = command[msg_out['command']](filename, msg_out)
+	print >> sys.stderr, "=== result='%s'" % result
+	msg_out['result'] = result.pop()
 
-		msg_out['pid'] = os.getpid()
-		msg_out['host'] = (data_address, data_port)
+	msg_out['pid'] = os.getpid()
+	msg_out['host'] = (data_address, data_port)
 
-		s.sendto( json.dumps( msg_out ), remote_addr )
+	print >> sys.stderr, "=== msg_out='%s'" % json.dumps(msg_out)
+
+	s.sendto( json.dumps( msg_out ), remote_addr )
 
 s.close()
 sys.exit(0)
