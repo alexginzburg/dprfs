@@ -13,8 +13,11 @@ import ConfigParser
 #from client import dprf_open
 
 message = {
-        'id':           uuid.uuid4().hex,
-        'pid':          os.getpid(),
+	'filename':	None,
+	'request':	None,
+	'result':	None,
+	'host':		None,
+	'command':	None,
 }
 
 config = ConfigParser.ConfigParser()
@@ -41,28 +44,34 @@ def dprfs_open( s, filename = None ):
 	except socket.timeout, ex:
 		print >> sys.stderr, "socket.timeout %s" % ex
 		raise ex
-	print "=== elapse %.5f" % ( time.time() - start )
 	print "=== msg_in='%s'" % msg_in 
 
-	return json.loads(msg_in)
+	return msg_in
 
 def dprfs_read ( s, fd ):
 
 	fd['command'] = 'read'
 	fd['request'] = fd['result']['base'] 
+	del fd['result']
+	host = fd['host'][0]
+	port = fd['host'][1]
+	del fd['host']
 	while True:
 		s.settimeout( data_timeout )
-		s.sendto( json.dumps(fd), ( fd['host'][0], fd['host'][1] ) )
+		print >> sys.stderr, "=== out='%s'" % json.dumps(fd)
+		s.sendto( json.dumps(fd), ( host, port ) )
+		start = time.time()
 		try:
 			msg_in, sender_addr = s.recvfrom( buffer_size )
 		except socket.timeout, ex:
 			print >> sys.stderr, "=== socket.timeout '%s'" % ex
 			break
 		
-		print >> sys.stderr, "=== elapse %.5f" % ( time.time() - start )
+		print >> sys.stderr, "=== len='%d'  msg_in='%s'" % ( len(msg_in), msg_in )
+
 		response = json.loads(msg_in)
 		
-		current = response['result']['current']
+		current = response['request']
 		top = response['result']['top']
 		fd['request'] = response['result']['next']
 
@@ -85,6 +94,7 @@ ttl = struct.pack( 'b', 1 )
 s.setsockopt( socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl )
 
 result = dprfs_open(s, cmd)
+result = json.loads(result)
 r = dprfs_read( s, result )
 print r
 s.close()

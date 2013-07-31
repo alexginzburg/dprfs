@@ -45,6 +45,10 @@ def _read( filename = None, fd = {} ):
 	if filename is None:
 		return response
 	os.chdir(os.path.join(meta_root, filename))
+	result = {
+		'base': os.readlink('base'),
+		'top': os.readlink('top')
+	} 
 	file_list = os.listdir('./')
 	file_list.remove('base')
 	file_list.remove('top') 
@@ -57,17 +61,16 @@ def _read( filename = None, fd = {} ):
 
 			filename = os.path.join( data_root, request[:4], request ) 
 			df = open(filename, "r")
-			response.append( {
-				'next': next,
-				'data': pickle.dumps(df.read( buffer_size )),
-			} )
+			result['next'] = next
+			result['data'] = pickle.dumps(df.read( buffer_size ))
 			break
 		else:
-			print >> sys.stderr, "=== file_inspect='%s'" % file_inspect
 			if isinstance(file_inspect, list):
 				file_inspect = file_inspect.pop()
 			os.chdir(file_inspect)
 			file_inspect = os.listdir('./')
+	print >> sys.stderr, "=== _read result='%s'" % result
+	response.append(result)
 	return response
 
 def _stat( filename ):
@@ -118,10 +121,8 @@ while 1:
 	filename = msg_out.get( 'filename', None )
 	result = []
 	result = command[msg_out['command']](filename, msg_out)
-	print >> sys.stderr, "=== result='%s'" % result
 	msg_out['result'] = result.pop()
 
-	msg_out['pid'] = os.getpid()
 	msg_out['host'] = (data_address, data_port)
 
 	print >> sys.stderr, "=== msg_out='%s'" % json.dumps(msg_out)
