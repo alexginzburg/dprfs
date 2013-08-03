@@ -90,11 +90,12 @@ def dprf_write ( s, fd, sys_fd ):
 	port = fd['h'][1]
 
 	previous = None
+	top = None
 
-	while True:
+	while top is None:
 		r = sys_fd.read( buffer_size )
 		if r == '':
-			return {}
+			top = previous
 
 		r = binascii.b2a_base64( r )
 
@@ -105,6 +106,7 @@ def dprf_write ( s, fd, sys_fd ):
 			'r':	{
 				'data': r,
 				'prev': previous,
+				'top':	top,
 			},
 		}
 		#print >> sys.stderr, "=== msg_out='%s'" % json.dumps(p)

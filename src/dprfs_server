@@ -48,7 +48,11 @@ def _read( fd ):
 	request = fd['r']['next']
 	filename = fd['r']['fn']
 
-	os.chdir(os.path.join(meta_root, filename))
+	base = os.path.join(
+		meta_root,
+		filename,
+		'base'
+	)
 	c = {
 		'base': os.readlink('base'),
 		'top':	os.readlink('top'),
@@ -84,6 +88,8 @@ def _write( fd ):
 	except KeyError, ex:
 		previous = 'none'
 
+	top = fd['r']['top']
+
 	filename = fd['fn']
 
 	path = "%s/%s" % ( meta_root, filename )
@@ -91,6 +97,25 @@ def _write( fd ):
 	  os.mkdir(path)
 	except os.error, ex:
 	  pass
+
+	if top:
+		link_name = os.path.join( path, 'top' )
+		try:
+			os.symlink(
+				os.path.join(
+					data_root,
+					top[:4],
+					top
+				),
+				link_name
+			)
+		except os.error, ex:
+			pass
+
+		return {
+			'base': top,
+			'fn':	fd['fn'],
+		}
 
 	current = hashlib.sha1(chunk).hexdigest()
 	dirname = os.path.join( data_root, current[:4] )
