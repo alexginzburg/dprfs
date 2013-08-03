@@ -60,6 +60,9 @@ def _read( fd ):
 		'next':	None,
 		'fn':	fd['r']['fn'],
 	} 
+
+	if request is None:
+		return c
 	
 	filename = os.path.join( data_root, request[:4], request ) 
 	df = open(filename, "rb")
@@ -102,11 +105,7 @@ def _write( fd ):
 		link_name = os.path.join( path, 'top' )
 		try:
 			os.symlink(
-				os.path.join(
-					data_root,
-					top[:4],
-					top
-				),
+				top,
 				link_name
 			)
 		except os.error, ex:
@@ -139,9 +138,8 @@ def _write( fd ):
 		)
 	
 	link_name = os.path.join( path, 'base' )
-	t_link_name = "%s.%s" % ( link_name, os.getpid() )
 	try:
-		os.symlink( filename, link_name )
+		os.symlink( current, link_name )
 	except os.error, ex:
 		pass
 

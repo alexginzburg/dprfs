@@ -10,6 +10,7 @@ import time
 import uuid
 import ConfigParser
 import binascii
+import hashlib
 
 #from client import dprf_open
 
@@ -68,7 +69,7 @@ def dprfs_read ( s, fd ):
 		}
 	}
 
-	#print >> sys.stderr, "=== out='%s'" % json.dumps(fd)
+	print >> sys.stderr, "=== out='%s'" % json.dumps(fd)
 
 	s.settimeout( data_timeout )
 
@@ -78,6 +79,7 @@ def dprfs_read ( s, fd ):
 	try:
 		msg_in, sender_addr = s.recvfrom( buffer_size )
 		s.settimeout( 0 )
+		#print >> sys.stderr, "=== read() msg_in = '%s'" % msg_in
 	except socket.timeout, ex:
 		print >> sys.stderr, "=== socket.timeout '%s'" % ex
 		return None
@@ -143,14 +145,27 @@ s.setsockopt( socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl )
 result = dprfs_open(s, filename)
 result = json.loads(result)
 
-#result['r']['next'] = result['r']['base']
-
 fp = open( filename, "rb")
-
 dprf_write( s, result, fp )
-
-	#fp.write( binascii.a2b_base64( r['r']['data'] ) )
-s.close()
 fp.close()
+
+result = dprfs_open(s, filename)
+print >> sys.stderr, "=== result='%s'" % result
+result = json.loads(result)
+
+rf = open( "foo.pdf", "wb" )
+result['r']['next'] = result['r']['base']
+while True:
+	result = dprfs_read( s, result )
+	chunk = binascii.a2b_base64( result['r']['data'] )
+	current = hashlib.sha1(chunk).hexdigest()
+	rf.write( chunk )
+	if result['r']['top'] == current:
+		break
+	if result['r']['next'] is None:
+		break
+
+rf.close()
+s.close()
 sys.exit(0)
 
