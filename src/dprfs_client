@@ -92,9 +92,11 @@ def dprf_write ( s, fd, sys_fd ):
 	previous = None
 
 	while True:
-		r = binascii.b2a_base64( sys_fd.read( 512 ) )
+		r = sys_fd.read( buffer_size )
 		if r == '':
 			return {}
+
+		r = binascii.b2a_base64( r )
 
 		p = {
 			'id':	None,
@@ -114,7 +116,11 @@ def dprf_write ( s, fd, sys_fd ):
 			msg_in, sender_addr = s.recvfrom( buffer_size )
 			#print >> sys.stderr, "=== msg_in='%s'" % msg_in
 			s.settimeout( 0 )
-			previous = json.loads(msg_in)['r']['base']
+			msg_in = json.loads( msg_in )
+			if previous == msg_in['r']['base']:
+				print >> sys.stderr, "=== loop? %s" % previous
+				return None
+			previous = msg_in['r']['base']
 		except socket.timeout, ex:
 			print >> sys.stderr, "=== socket.timeout '%s'" % ex
 			return None

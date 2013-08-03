@@ -171,7 +171,7 @@ while 1:
 
 	read_fd, _, _ = select.select( [ s, ds ], [], [] )
 	msg_in = {}
-	msg_in, remote_addr = read_fd[0].recvfrom( buffer_size * 8 )
+	msg_in, remote_addr = read_fd[0].recvfrom( 4096 * 8 )
 
 	#print "received='%s' from '%s'" % ( msg_in, remote_addr )
 	msg_in = json.loads( msg_in )
