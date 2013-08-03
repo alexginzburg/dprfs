@@ -8,7 +8,8 @@ import struct
 import json
 import hashlib
 import ConfigParser
-import cPickle as pickle
+import xattr
+import binascii
 
 config = ConfigParser.ConfigParser()
 config.read( 'server.conf' )
@@ -23,60 +24,110 @@ data_address	= config.get( 'data', 'network_address' )
 data_port	= config.getint( 'data', 'network_port' )
 data_root	= config.get( 'data', 'data_root' )
 
-def _ls( dirname ):
-	if dirname is None:
-		dirname = './'
-	return os.listdir( dirname )
+def _ls( ):
+	return {}
 
-def _open( filename = None, fd = {} ):
-	response = []
-	if filename is None:
-		return response
-	os.chdir(os.path.join(meta_root, filename))
-	response.append( {
-		'base': os.readlink('base'),
-		'top': os.readlink('top')
-	} )
-	return response
+def _open( fd ):
 
-def _read( filename = None, fd = {} ):
-	response = []
-	request = fd['request']
-	if filename is None:
-		return response
+	filename = fd['fn']
+
+	try:
+		os.chdir(os.path.join(meta_root, filename))
+		return {
+			'base': os.readlink('base'),
+			'top':	os.readlink('top'),
+			'fn':	fd['fn'],
+		}
+	except Exception, ex:
+		return {
+			'id':	None,
+			'fn':	fd['fn']
+		}
+
+def _read( fd ):
+	request = fd['r']['next']
+	filename = fd['r']['fn']
+
 	os.chdir(os.path.join(meta_root, filename))
-	result = {
+	c = {
 		'base': os.readlink('base'),
-		'top': os.readlink('top')
+		'top':	os.readlink('top'),
+		'data':	None,
+		'next':	None,
+		'fn':	fd['r']['fn'],
 	} 
-	file_list = os.listdir('./')
-	file_list.remove('base')
-	file_list.remove('top') 
-	file_inspect = file_list[0]
 	
-	while True:
-		if request == file_inspect:
-			os.chdir(request)
-			next = os.listdir('./')[0]
+	filename = os.path.join( data_root, request[:4], request ) 
+	df = open(filename, "rb")
+	c['data'] = binascii.b2a_base64( df.read( buffer_size ) )
+	try:
+		c['next'] = xattr.getxattr(df, 'dprfs.next')
+	except KeyError, ex:
+		c['next'] = None
 
-			filename = os.path.join( data_root, request[:4], request ) 
-			df = open(filename, "r")
-			result['next'] = next
-			result['data'] = pickle.dumps(df.read( buffer_size ))
-			break
-		else:
-			if isinstance(file_inspect, list):
-				file_inspect = file_inspect.pop()
-			os.chdir(file_inspect)
-			file_inspect = os.listdir('./')
-	print >> sys.stderr, "=== _read result='%s'" % result
-	response.append(result)
-	return response
+	df.close()
 
-def _stat( filename ):
-	if filename is None:
-		filename = '.'
-	return str(os.stat(filename))
+	return c
+
+def _write( fd ):
+
+# meta_root/<file_name>/{base,top}
+# the data chunk has an attribute with
+#	previous
+#   and next
+# data chunk hashes
+# no need of storing entire tree in the meta_root
+
+	chunk = binascii.a2b_base64( fd['r']['data'] )
+	try:
+		previous = fd['r']['prev']
+	except KeyError, ex:
+		previous = 'none'
+
+	filename = fd['fn']
+
+	path = "%s/%s" % ( meta_root, filename )
+	try:
+	  os.mkdir(path)
+	except os.error, ex:
+	  pass
+
+	current = hashlib.sha1(chunk).hexdigest()
+	dirname = os.path.join( data_root, current[:4] )
+	try:
+	  os.mkdir(dirname)
+	except os.error, ex:
+	  pass
+
+	filename = os.path.join( dirname, current )
+	df = open(filename, "wb")
+	print >> df, chunk
+	df.close()
+	if previous:
+		xattr.setxattr( os.path.join(
+				data_root,
+				previous[:4],
+				previous
+			),
+			'dprfs.next',
+			current
+		)
+	
+	link_name = os.path.join( path, 'base' )
+	t_link_name = "%s.%s" % ( link_name, os.getpid() )
+	try:
+		os.symlink( filename, link_name )
+	except os.error, ex:
+		pass
+
+	return {
+		'base': current,
+		'fn':	fd['fn'],
+	}
+	
+
+def _stat( fd ):
+	return {}
 
 def _mv():
 	pass
@@ -91,13 +142,14 @@ def _close():
 	pass
 	
 command = {
-	'ls': 		_ls,
 	'open':		_open,
+	'read':		_read,
+	'write':	_write,
+	'ls': 		_ls,
 	'mv':		_mv,
 	'cp':		_cp,
 	'ln':		_ln,
 	'stat':		_stat,
-	'read':		_read,
 }
 
 s = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
@@ -110,24 +162,31 @@ ds = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 ds.bind( ( data_address, data_port) )
 
 while 1:
+	p = {
+	  'id':	None,
+	  'h':	None,
+	  'cmd': None,
+	  'r':	None,
+	}
 
-	read, _, _ = select.select( [ s, ds ], [], [] )
-	msg_in, remote_addr = read[0].recvfrom( buffer_size )
+	read_fd, _, _ = select.select( [ s, ds ], [], [] )
+	msg_in = {}
+	msg_in, remote_addr = read_fd[0].recvfrom( buffer_size * 8 )
 
-	print "received='%s' from '%s'" % ( msg_in, remote_addr )
-	msg_out = json.loads( msg_in )
+	#print "received='%s' from '%s'" % ( msg_in, remote_addr )
+	msg_in = json.loads( msg_in )
 
-	argument = msg_out.get( 'argument', None )
-	filename = msg_out.get( 'filename', None )
-	result = []
-	result = command[msg_out['command']](filename, msg_out)
-	msg_out['result'] = result.pop()
+	p = {
+		'id':	msg_in['id'],
+		'cmd':	msg_in['cmd'],
+		'h':	(data_address, data_port),
+	}
 
-	msg_out['host'] = (data_address, data_port)
+	p['r'] = command[p['cmd']](msg_in)
 
-	print >> sys.stderr, "=== msg_out='%s'" % json.dumps(msg_out)
+	#print >> sys.stderr, "=== msg_out='%s'" % json.dumps(p)
 
-	s.sendto( json.dumps( msg_out ), remote_addr )
+	s.sendto( json.dumps( p ), remote_addr )
 
 s.close()
 sys.exit(0)

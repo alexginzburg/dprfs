@@ -9,15 +9,16 @@ import json
 import time
 import uuid
 import ConfigParser
+import binascii
 
 #from client import dprf_open
 
 message = {
 	'filename':	None,
-	'request':	None,
-	'result':	None,
-	'host':		None,
-	'command':	None,
+	'id':		None,
+	'r':		None,
+	'h':		None,
+	'cmd':		None,
 }
 
 config = ConfigParser.ConfigParser()
@@ -30,17 +31,22 @@ data_timeout	= config.getfloat( 'client', 'data_timeout' )
 buffer_size	= config.getint( 'client', 'buffer_size' )
 
 
-def dprfs_open( s, filename = None ):
+def dprfs_open( s, filename ):
 
-	message['command'] = 'open'
-	message['filename'] = filename
+	message = {
+		'id':	None,
+		'cmd':	'open',
+		'fn':	filename,
+	}
 
+	print "=== msg_out='%s'" % message 
 	sent = s.sendto( json.dumps(message), ( network_address, network_port ) )
 	s.settimeout( status_timeout )
 	start = time.time()
 
 	try:
 		msg_in, sender_addr = s.recvfrom( buffer_size )
+		s.settimeout( 0 )
 	except socket.timeout, ex:
 		print >> sys.stderr, "socket.timeout %s" % ex
 		raise ex
@@ -50,53 +56,93 @@ def dprfs_open( s, filename = None ):
 
 def dprfs_read ( s, fd ):
 
-	fd['command'] = 'read'
-	fd['request'] = fd['result']['base'] 
-	del fd['result']
-	host = fd['host'][0]
-	port = fd['host'][1]
-	del fd['host']
+	host = fd['h'][0]
+	port = fd['h'][1]
+
+	fd = {
+		'id':	None,
+		'cmd':	'read',
+		'r':	{
+		  'next':	fd['r']['next'],
+		  'fn':		fd['r']['fn'],
+		}
+	}
+
+	#print >> sys.stderr, "=== out='%s'" % json.dumps(fd)
+
+	s.settimeout( data_timeout )
+
+	s.sendto( json.dumps(fd), ( host, port ) )
+
+	start = time.time()
+	try:
+		msg_in, sender_addr = s.recvfrom( buffer_size )
+		s.settimeout( 0 )
+	except socket.timeout, ex:
+		print >> sys.stderr, "=== socket.timeout '%s'" % ex
+		return None
+	
+	return json.loads(msg_in)
+
+def dprf_write ( s, fd, sys_fd ):
+
+	host = fd['h'][0]
+	port = fd['h'][1]
+
+	previous = None
+
 	while True:
+		r = binascii.b2a_base64( sys_fd.read( 512 ) )
+		if r == '':
+			return {}
+
+		p = {
+			'id':	None,
+			'cmd':	'write',
+			'fn':	fd['r']['fn'],
+			'r':	{
+				'data': r,
+				'prev': previous,
+			},
+		}
+		#print >> sys.stderr, "=== msg_out='%s'" % json.dumps(p)
 		s.settimeout( data_timeout )
-		print >> sys.stderr, "=== out='%s'" % json.dumps(fd)
-		s.sendto( json.dumps(fd), ( host, port ) )
+		s.sendto( json.dumps(p), ( host, port ) )
+
 		start = time.time()
 		try:
 			msg_in, sender_addr = s.recvfrom( buffer_size )
+			#print >> sys.stderr, "=== msg_in='%s'" % msg_in
+			s.settimeout( 0 )
+			previous = json.loads(msg_in)['r']['base']
 		except socket.timeout, ex:
 			print >> sys.stderr, "=== socket.timeout '%s'" % ex
-			break
-		
-		print >> sys.stderr, "=== len='%d'  msg_in='%s'" % ( len(msg_in), msg_in )
-
-		response = json.loads(msg_in)
-		
-		current = response['request']
-		top = response['result']['top']
-		fd['request'] = response['result']['next']
-
-		return response['result']['data']
-
-		if current == top:
-			return
-
+			return None
+	
 
 command = {
         'open':         dprfs_open,
         'read':         dprfs_read,
 }
 
-cmd = sys.argv[1]
+filename = sys.argv[1]
 
 s = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 
 ttl = struct.pack( 'b', 1 )
 s.setsockopt( socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl )
 
-result = dprfs_open(s, cmd)
+result = dprfs_open(s, filename)
 result = json.loads(result)
-r = dprfs_read( s, result )
-print r
+
+#result['r']['next'] = result['r']['base']
+
+fp = open( filename, "rb")
+
+dprf_write( s, result, fp )
+
+	#fp.write( binascii.a2b_base64( r['r']['data'] ) )
 s.close()
+fp.close()
 sys.exit(0)
 
