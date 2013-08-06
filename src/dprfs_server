@@ -36,12 +36,12 @@ def _open( fd ):
 		return {
 			'base': os.readlink('base'),
 			'top':	os.readlink('top'),
-			'fn':	fd['fn'],
+			'fn':	filename,
 		}
 	except Exception, ex:
 		return {
 			'id':	None,
-			'fn':	fd['fn']
+			'fn':	filename,
 		}
 
 def _read( fd ):
@@ -66,13 +66,15 @@ def _read( fd ):
 	
 	filename = os.path.join( data_root, request[:4], request ) 
 	df = open(filename, "rb")
-	c['data'] = binascii.b2a_base64( df.read( buffer_size ) )
+	data = []
+	c['data'] = binascii.b2a_base64( df.read( buffer_size * 2 ) )
 	try:
 		c['next'] = xattr.getxattr(df, 'dprfs.next')
 	except KeyError, ex:
 		c['next'] = None
 
-	df.close()
+	finally:
+		df.close()
 
 	return c
 
@@ -83,7 +85,6 @@ def _write( fd ):
 #	previous
 #   and next
 # data chunk hashes
-# no need of storing entire tree in the meta_root
 
 	chunk = binascii.a2b_base64( fd['r']['data'] )
 	try:
@@ -196,7 +197,6 @@ while 1:
 	msg_in = {}
 	msg_in, remote_addr = read_fd[0].recvfrom( 4096 * 8 )
 
-	#print "received='%s' from '%s'" % ( msg_in, remote_addr )
 	msg_in = json.loads( msg_in )
 
 	p = {
@@ -206,8 +206,6 @@ while 1:
 	}
 
 	p['r'] = command[p['cmd']](msg_in)
-
-	#print >> sys.stderr, "=== msg_out='%s'" % json.dumps(p)
 
 	s.sendto( json.dumps( p ), remote_addr )
 

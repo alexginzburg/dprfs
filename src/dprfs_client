@@ -12,7 +12,9 @@ import ConfigParser
 import binascii
 import hashlib
 
-#from client import dprf_open
+#from lib.client import dprf_open
+#from lib.client import dprf_read
+#from lib.client import dprf_write
 
 message = {
 	'filename':	None,
@@ -34,42 +36,72 @@ buffer_size	= config.getint( 'client', 'buffer_size' )
 
 def dprfs_open( s, filename ):
 
+	id = uuid.uuid4().hex
+	
 	message = {
-		'id':	None,
+		'id':	id,
 		'cmd':	'open',
 		'fn':	filename,
 	}
+	msg = {
+		'id':	id,
+		'fn':	filename,
+		'h':	[],
+		'r':	{
+		   'base':	None,
+		   'top':	None, 
+		}
+	}
 
-	print "=== msg_out='%s'" % message 
+	print "=== %s msg_out='%s'" % ( __name__, message )
 	sent = s.sendto( json.dumps(message), ( network_address, network_port ) )
 	s.settimeout( status_timeout )
 	start = time.time()
 
-	try:
-		msg_in, sender_addr = s.recvfrom( buffer_size )
-		s.settimeout( 0 )
-	except socket.timeout, ex:
-		print >> sys.stderr, "socket.timeout %s" % ex
-		raise ex
-	print "=== msg_in='%s'" % msg_in 
+	while True:
+		try:
+			msg_in, sender_addr = s.recvfrom( buffer_size * 2 )
+			msg_in = json.loads(msg_in)
+			if msg['id'] == msg_in['id']:
+				msg['id'] = msg_in['id']
+				msg['fn'] = msg_in['r']['fn']
+				if msg['r']['top'] is None:
+					msg['r']['base'] = msg_in['r']['base']
+					msg['r']['top'] = msg_in['r']['top']
+				if msg['r']['top'] == msg_in['r']['top']:
+					#host = msg['h']
+					#host.append( msg_in['h'] )
+					msg['h'] = msg_in['h']
+				
+			
+		except socket.timeout, ex:
+			print >> sys.stderr, "socket.timeout %s" % ex
+			s.settimeout( 0 )
+			break
+	print "=== %s msg='%s'" % ( __name__, msg )
 
-	return msg_in
+	return json.dumps(msg)
 
 def dprfs_read ( s, fd ):
+
+	fn = fd.get('fn', None)
+	if not fn:
+		fn = fd['r'].get('fn', None)
 
 	host = fd['h'][0]
 	port = fd['h'][1]
 
 	fd = {
-		'id':	None,
+		'id':	uuid.uuid4().hex,
 		'cmd':	'read',
+		'h':	( host, port ),
 		'r':	{
 		  'next':	fd['r']['next'],
-		  'fn':		fd['r']['fn'],
+		  'fn':		fn,
 		}
 	}
 
-	print >> sys.stderr, "=== out='%s'" % json.dumps(fd)
+	print >> sys.stderr, "=== %s out='%s'" % ( __name__, json.dumps(fd) )
 
 	s.settimeout( data_timeout )
 
@@ -77,9 +109,8 @@ def dprfs_read ( s, fd ):
 
 	start = time.time()
 	try:
-		msg_in, sender_addr = s.recvfrom( buffer_size )
+		msg_in, sender_addr = s.recvfrom( buffer_size * 2 )
 		s.settimeout( 0 )
-		#print >> sys.stderr, "=== read() msg_in = '%s'" % msg_in
 	except socket.timeout, ex:
 		print >> sys.stderr, "=== socket.timeout '%s'" % ex
 		return None
@@ -87,6 +118,7 @@ def dprfs_read ( s, fd ):
 	return json.loads(msg_in)
 
 def dprf_write ( s, fd, sys_fd ):
+
 
 	host = fd['h'][0]
 	port = fd['h'][1]
@@ -102,27 +134,26 @@ def dprf_write ( s, fd, sys_fd ):
 		r = binascii.b2a_base64( r )
 
 		p = {
-			'id':	None,
+			'id':	uuid.uuid4().hex,
 			'cmd':	'write',
-			'fn':	fd['r']['fn'],
+			'fn':	fd['fn'],
 			'r':	{
 				'data': r,
 				'prev': previous,
 				'top':	top,
 			},
 		}
-		#print >> sys.stderr, "=== msg_out='%s'" % json.dumps(p)
+
 		s.settimeout( data_timeout )
 		s.sendto( json.dumps(p), ( host, port ) )
 
 		start = time.time()
 		try:
 			msg_in, sender_addr = s.recvfrom( buffer_size )
-			#print >> sys.stderr, "=== msg_in='%s'" % msg_in
 			s.settimeout( 0 )
 			msg_in = json.loads( msg_in )
 			if previous == msg_in['r']['base']:
-				print >> sys.stderr, "=== loop? %s" % previous
+				print >> sys.stderr, "=== %s loop? %s" % ( __name__, previous )
 				return None
 			previous = msg_in['r']['base']
 		except socket.timeout, ex:
@@ -150,7 +181,6 @@ dprf_write( s, result, fp )
 fp.close()
 
 result = dprfs_open(s, filename)
-print >> sys.stderr, "=== result='%s'" % result
 result = json.loads(result)
 
 rf = open( "foo.pdf", "wb" )
