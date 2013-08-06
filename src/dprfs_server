@@ -67,7 +67,8 @@ def _read( fd ):
 	filename = os.path.join( data_root, request[:4], request ) 
 	df = open(filename, "rb")
 	data = []
-	c['data'] = binascii.b2a_base64( df.read( buffer_size * 2 ) )
+	chunk = df.read( buffer_size * 2 )
+	c['data'] = binascii.b2a_base64( chunk )
 	try:
 		c['next'] = xattr.getxattr(df, 'dprfs.next')
 	except KeyError, ex:
@@ -126,7 +127,7 @@ def _write( fd ):
 
 	filename = os.path.join( dirname, current )
 	df = open(filename, "wb")
-	print >> df, chunk
+	print >> df, chunk,
 	df.close()
 	if previous:
 		xattr.setxattr( os.path.join(
