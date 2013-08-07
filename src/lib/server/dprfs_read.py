@@ -9,21 +9,13 @@ config = ConfigParser.ConfigParser()
 config.read( 'server.conf' )
 
 buffer_size	= config.getint( 'general', 'buffer_size' )
-meta_root	= config.get( 'status', 'meta_root' )
 data_root	= config.get( 'data', 'data_root' )
 
 def _read( fd ):
-	request = fd['r']['next']
+	request = fd['r']['request']
 	filename = fd['r']['fn']
 
-	base = os.path.join(
-		meta_root,
-		filename,
-		'base'
-	)
 	c = {
-		'base': os.readlink('base'),
-		'top':	os.readlink('top'),
 		'data':	None,
 		'next':	None,
 		'fn':	fd['r']['fn'],

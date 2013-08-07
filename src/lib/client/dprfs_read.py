@@ -33,7 +33,7 @@ def dprfs_read ( s, fd ):
 			'host': host,
 		},
 		'r':	{
-		  'next':	fd['r']['next'],
+		  'request':	fd['r']['next'],
 		  'fn':		fn,
 		}
 	}
