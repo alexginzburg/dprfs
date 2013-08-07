@@ -45,8 +45,6 @@ while True:
 	chunk = binascii.a2b_base64( result['r']['data'] )
 	current = hashlib.sha1(chunk).hexdigest()
 	rf.write( chunk )
-	if result['r']['top'] == current:
-		break
 	if result['r']['next'] is None:
 		break
 
