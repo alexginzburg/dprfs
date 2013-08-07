@@ -186,7 +186,8 @@ mreq = struct.pack( '4sL', group, socket.INADDR_ANY )
 s.setsockopt( socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq )
 
 ds = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
-ds.bind( ( data_address, data_port) )
+ds.setsockopt( socket.SOL_SOCKET, socket.SO_REUSEADDR, 1 )
+ds.bind( ( data_address, network_port) )
 
 while 1:
 	p = {

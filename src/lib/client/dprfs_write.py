@@ -19,10 +19,8 @@ buffer_size	= config.getint( 'client', 'buffer_size' )
 def dprfs_write ( s, fd, sys_fd ):
 
 	host = fd['h']['host']
-	port = fd['h']['port']
 
 	host = host.pop()
-	port = port.pop()
 
 	previous = None
 	top = None
@@ -46,7 +44,7 @@ def dprfs_write ( s, fd, sys_fd ):
 		}
 
 		s.settimeout( data_timeout )
-		s.sendto( json.dumps(p), ( host, port ) )
+		s.sendto( json.dumps(p), ( host, network_port ) )
 
 		start = time.time()
 		try:

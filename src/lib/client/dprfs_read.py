@@ -25,14 +25,12 @@ def dprfs_read ( s, fd ):
 	h = fd['h']
 	idx = random.randint( 0, len(h['host'])-1 )
 	host = h['host'].pop(idx)
-	port = h['port'].pop(idx)
 
 	fd = {
 		'id':	uuid.uuid4().hex,
 		'cmd':	'read',
 		'h':	{
 			'host': host,
-			'port': port,
 		},
 		'r':	{
 		  'next':	fd['r']['next'],
@@ -44,7 +42,7 @@ def dprfs_read ( s, fd ):
 
 	s.settimeout( data_timeout )
 
-	s.sendto( json.dumps(fd), ( host, port ) )
+	s.sendto( json.dumps(fd), ( host, network_port ) )
 
 	start = time.time()
 	try:
@@ -57,6 +55,5 @@ def dprfs_read ( s, fd ):
 	msg_in = json.loads(msg_in)
 	msg_in['h'] = {
 		'host': [host],
-                'port': [port],
 	}
 	return msg_in

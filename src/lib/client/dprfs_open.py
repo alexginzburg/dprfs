@@ -53,7 +53,6 @@ def dprfs_open( s, filename ):
 					msg['r']['top'] = msg_in['r']['top']
 				if msg['r']['top'] == msg_in['r']['top']:
 					host.append( msg_in['h'][0] )
-					port.append( msg_in['h'][1] )
 				
 		except socket.timeout, ex:
 			print >> sys.stderr, "%s socket.timeout %s" % ( __name__, ex )
@@ -62,7 +61,6 @@ def dprfs_open( s, filename ):
 
 	msg['h'] = {
 		'host': host,
-		'port': port,
 	}
 	#print "=== %s msg='%s'" % ( __name__, msg )
 
