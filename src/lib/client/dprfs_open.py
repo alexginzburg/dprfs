@@ -34,11 +34,13 @@ def dprfs_open( s, filename ):
 		}
 	}
 
-	print "=== %s msg_out='%s'" % ( __name__, message )
+	#print "=== %s msg_out='%s'" % ( __name__, message )
 	sent = s.sendto( json.dumps(message), ( network_address, network_port ) )
 	s.settimeout( status_timeout )
 	start = time.time()
 
+	host = []
+	port = []
 	while True:
 		try:
 			msg_in, sender_addr = s.recvfrom( buffer_size * 2 )
@@ -50,15 +52,18 @@ def dprfs_open( s, filename ):
 					msg['r']['base'] = msg_in['r']['base']
 					msg['r']['top'] = msg_in['r']['top']
 				if msg['r']['top'] == msg_in['r']['top']:
-					#host = msg['h']
-					#host.append( msg_in['h'] )
-					msg['h'] = msg_in['h']
+					host.append( msg_in['h'][0] )
+					port.append( msg_in['h'][1] )
 				
-			
 		except socket.timeout, ex:
-			print >> sys.stderr, "socket.timeout %s" % ex
+			print >> sys.stderr, "%s socket.timeout %s" % ( __name__, ex )
 			s.settimeout( 0 )
 			break
-	print "=== %s msg='%s'" % ( __name__, msg )
+
+	msg['h'] = {
+		'host': host,
+		'port': port,
+	}
+	#print "=== %s msg='%s'" % ( __name__, msg )
 
 	return json.dumps(msg)

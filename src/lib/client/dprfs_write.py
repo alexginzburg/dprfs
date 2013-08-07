@@ -18,9 +18,11 @@ buffer_size	= config.getint( 'client', 'buffer_size' )
 
 def dprfs_write ( s, fd, sys_fd ):
 
+	host = fd['h']['host']
+	port = fd['h']['port']
 
-	host = fd['h'][0]
-	port = fd['h'][1]
+	host = host.pop()
+	port = port.pop()
 
 	previous = None
 	top = None
@@ -52,9 +54,8 @@ def dprfs_write ( s, fd, sys_fd ):
 			s.settimeout( 0 )
 			msg_in = json.loads( msg_in )
 			if previous == msg_in['r']['base']:
-				print >> sys.stderr, "=== %s loop? %s" % ( __name__, previous )
 				return None
 			previous = msg_in['r']['base']
 		except socket.timeout, ex:
-			print >> sys.stderr, "=== socket.timeout '%s'" % ex
+			print >> sys.stderr, "=== %s socket.timeout '%s'" % ( __name, ex )
 			return None

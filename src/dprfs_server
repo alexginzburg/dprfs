@@ -30,19 +30,21 @@ def _ls( ):
 def _open( fd ):
 
 	filename = fd['fn']
+	r = None
 
 	try:
 		os.chdir(os.path.join(meta_root, filename))
-		return {
+		r = {
 			'base': os.readlink('base'),
 			'top':	os.readlink('top'),
 			'fn':	filename,
 		}
 	except Exception, ex:
-		return {
+		r = {
 			'id':	None,
 			'fn':	filename,
 		}
+	return r
 
 def _read( fd ):
 	request = fd['r']['next']

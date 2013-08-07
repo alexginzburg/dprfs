@@ -3,6 +3,7 @@ import socket
 import json
 import time
 import uuid
+import random
 import ConfigParser
 
 config = ConfigParser.ConfigParser()
@@ -21,20 +22,25 @@ def dprfs_read ( s, fd ):
 	if not fn:
 		fn = fd['r'].get('fn', None)
 
-	host = fd['h'][0]
-	port = fd['h'][1]
+	h = fd['h']
+	idx = random.randint( 0, len(h['host'])-1 )
+	host = h['host'].pop(idx)
+	port = h['port'].pop(idx)
 
 	fd = {
 		'id':	uuid.uuid4().hex,
 		'cmd':	'read',
-		'h':	( host, port ),
+		'h':	{
+			'host': host,
+			'port': port,
+		},
 		'r':	{
 		  'next':	fd['r']['next'],
 		  'fn':		fn,
 		}
 	}
 
-	print >> sys.stderr, "=== %s out='%s'" % ( __name__, json.dumps(fd) )
+	#print >> sys.stderr, "=== %s out='%s'" % ( __name__, json.dumps(fd) )
 
 	s.settimeout( data_timeout )
 
@@ -48,4 +54,9 @@ def dprfs_read ( s, fd ):
 		print >> sys.stderr, "=== socket.timeout '%s'" % ex
 		return None
 	
-	return json.loads(msg_in)
+	msg_in = json.loads(msg_in)
+	msg_in['h'] = {
+		'host': [host],
+                'port': [port],
+	}
+	return msg_in

@@ -3,29 +3,15 @@
 import os
 import sys
 import socket
-import select
 import struct
 import json
 import time
-import uuid
-import ConfigParser
 import binascii
 import hashlib
 
 from lib.client.dprfs_open import dprfs_open
 from lib.client.dprfs_read import dprfs_read
 from lib.client.dprfs_write import dprfs_write
-
-
-config = ConfigParser.ConfigParser()
-config.read( 'client.conf' )
-
-network_address	= config.get( 'client', 'network_address' )
-network_port	= config.getint( 'client', 'network_port' )
-status_timeout	= config.getfloat( 'client', 'status_timeout' )
-data_timeout	= config.getfloat( 'client', 'data_timeout' )
-buffer_size	= config.getint( 'client', 'buffer_size' )
-
 
 
 filename = sys.argv[1]
@@ -35,16 +21,23 @@ s = socket.socket( socket.AF_INET, socket.SOCK_DGRAM )
 ttl = struct.pack( 'b', 1 )
 s.setsockopt( socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl )
 
+start = time.time()
 result = dprfs_open(s, filename)
+print >> sys.stderr, "open '%.5f'" % ( time.time() - start )
 result = json.loads(result)
 
+start = time.time()
 fp = open( filename, "rb")
 dprfs_write( s, result, fp )
+print >> sys.stderr, "write '%.5f'" % ( time.time() - start )
 fp.close()
 
+start = time.time()
 result = dprfs_open(s, filename)
+print >> sys.stderr, "open '%.5f'" % ( time.time() - start )
 result = json.loads(result)
 
+start = time.time()
 rf = open( "foo.pdf", "wb" )
 result['r']['next'] = result['r']['base']
 while True:
@@ -58,6 +51,8 @@ while True:
 		break
 
 rf.close()
+print >> sys.stderr, "read '%.5f'" % ( time.time() - start )
+
 s.close()
 sys.exit(0)
 
