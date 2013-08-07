@@ -2,71 +2,20 @@
 
 import os
 import sys
-import hashlib
 import ConfigParser
 
 config = ConfigParser.ConfigParser()
 config.read( 'server.conf' )
 
-buffer_size	= config.getint( 'general', 'buffer_size' )
-
 meta_root	= config.get( 'status', 'meta_root' )
 data_root	= config.get( 'data', 'data_root' )
 
-top  = None
-base = None
-
-cwd = os.getcwd()
-
-fn = sys.argv[1]
-
-path = "%s/%s" % ( meta_root, fn )
 try:
-  os.mkdir(path)
-  os.chdir(path)
+  os.mkdir(meta_root)
 except os.error, ex:
-  pass
+  print >> sys.stderr, ex
 
-p = 0
-gp = 0
-b = 0
-c = ''
-
-while True:
-  r = sys.stdin.read( buffer_size )
-  if r == '':
-    break
-  c = hashlib.sha1(r).hexdigest()
-  if not base:
-    base = c
-  top = c
-
-  dirname = c[:4]
-  dirname = "%s/%s" % ( data_root, dirname )
-  try:
-    os.mkdir(dirname)
-  except os.error, ex:
-    pass
-
-  filename = "%s/%s" % ( dirname, c )
-  df = open(filename, "w")
-  print >> df, r
-  df.close()
-  
-  try:
-    os.mkdir(c)
-    os.chdir(c)
-  except os.error, ex:
-    pass
-
-os.chdir(cwd)
-
-link_name = os.path.join( path, 'base' )
-t_link_name = "%s.%s" % ( link_name, os.getpid() )
-os.symlink( base, t_link_name )
-os.rename( t_link_name, link_name )
-
-link_name = os.path.join( path, 'top' )
-t_link_name = "%s.%s" % ( link_name, os.getpid() )
-os.symlink( top, t_link_name )
-os.rename( t_link_name, link_name )
+try:
+  os.mkdir(data_root)
+except os.error, ex:
+  print >> sys.stderr, ex
