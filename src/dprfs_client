@@ -43,9 +43,9 @@ result['r']['next'] = result['r']['base']
 while True:
 	result = dprfs_read( s, result )
 	chunk = binascii.a2b_base64( result['r']['data'] )
-	current = hashlib.sha1(chunk).hexdigest()
 	rf.write( chunk )
-	if result['r']['next'] is None:
+	next = result['r']['next']
+	if isinstance( next, list ) and len(next) == 0:
 		break
 
 rf.close()

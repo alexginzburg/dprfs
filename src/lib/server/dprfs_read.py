@@ -12,8 +12,12 @@ buffer_size	= config.getint( 'general', 'buffer_size' )
 data_root	= config.get( 'data', 'data_root' )
 
 def _read( fd ):
-	request = fd['r']['request']
-	filename = fd['r']['fn']
+
+	r = fd['r']
+	request = r.get( 'request', None )
+	filename = r.get( 'fn', None )
+
+	step = skip = r.get( 'step', 1 )
 
 	c = {
 		'data':	None,
@@ -23,18 +27,33 @@ def _read( fd ):
 
 	if request is None:
 		return c
-	
-	filename = os.path.join( data_root, request[:4], request ) 
-	df = open(filename, "rb")
-	data = []
-	chunk = df.read( buffer_size * 2 )
-	c['data'] = binascii.b2a_base64( chunk )
-	try:
-		c['next'] = xattr.getxattr(df, 'dprfs.next')
-	except KeyError, ex:
-		c['next'] = None
 
-	finally:
-		df.close()
+	dprfs_next = []
+	
+	while step and skip:
+
+		if skip > 0:
+			skip -= 1
+
+		filename = os.path.join( data_root, request[:4], request ) 
+
+		if not skip:
+			df = open(filename, "rb")
+			data = []
+			chunk = df.read( buffer_size * 2 )
+			c['data'] = binascii.b2a_base64( chunk )
+			df.close()
+
+		try:
+			request = xattr.getxattr(filename, 'dprfs.next')
+		except KeyError, ex:
+			request = None
+			break
+
+		if not skip and step:
+			dprfs_next.append( request )
+			step -= 1
+
+	c['next'] = dprfs_next
 
 	return c

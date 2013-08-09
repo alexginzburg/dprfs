@@ -1,9 +1,11 @@
 import sys
 import socket
+import errno
 import json
 import time
 import uuid
 import random
+import binascii
 import ConfigParser
 
 config = ConfigParser.ConfigParser()
@@ -25,35 +27,46 @@ def dprfs_read ( s, fd ):
 	h = fd['h']
 	idx = random.randint( 0, len(h['host'])-1 )
 	host = h['host'].pop(idx)
+	request = fd['r']['next']
+	if not isinstance( request, list ):
+		request = [request]
 
-	fd = {
-		'id':	uuid.uuid4().hex,
-		'cmd':	'read',
-		'h':	{
-			'host': host,
-		},
-		'r':	{
-		  'request':	fd['r']['next'],
-		  'fn':		fn,
+	r_count = 0
+	request_accounting = {}
+	for r_chunk in request:
+		fd = {
+			'id':	uuid.uuid4().hex,
+			'cmd':	'read',
+			'h':	{
+				'host': host,
+			},
+			'r':	{
+			  'request':	r_chunk,
+			  'fn':		fn,
+			}
 		}
-	}
+		request_accounting[ fd['id'] ] = r_count
+		r_count += 1
 
-	#print >> sys.stderr, "=== %s out='%s'" % ( __name__, json.dumps(fd) )
+		s.sendto( json.dumps(fd), ( host, network_port ) )
 
-	s.settimeout( data_timeout )
-
-	s.sendto( json.dumps(fd), ( host, network_port ) )
-
-	start = time.time()
-	try:
-		msg_in, sender_addr = s.recvfrom( buffer_size * 2 )
-		s.settimeout( 0 )
-	except socket.timeout, ex:
-		print >> sys.stderr, "=== socket.timeout '%s'" % ex
-		return None
+	data = []
+	while r_count:
+		try:
+			msg_in, sender_addr = s.recvfrom( buffer_size * 2 )
+		except socket.error, ex:
+			if ex.errno == errno.EAGAIN:
+				continue
+			else:
+				break
+		msg_in = json.loads(msg_in)
+		idx = request_accounting[ msg_in['id'] ]
+		data.insert( idx, binascii.a2b_base64( msg_in['r']['data'] ) )
+		r_count -= 1
 	
-	msg_in = json.loads(msg_in)
+	msg_in['r']['data'] = binascii.b2a_base64( ''.join( data ) )
 	msg_in['h'] = {
 		'host': [host],
 	}
+
 	return msg_in
