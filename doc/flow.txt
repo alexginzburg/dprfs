@@ -1,0 +1,73 @@
+===========
+open()					++++++++++
+				    ~~~ + host_A +
+				    |   ++++++++++
+				    |
+   +==================+		    |      ++++++++++
+   | request_id       | multicast   + host_B +
+   | command = open   | >> ~~~~~~~~~|  	   ++++++++++	++++++++++
+   | filename         |		    |~~~~~~~~~~~~~~~~~~ + host_C +
+   +==================+		    |                   ++++++++++
+				    |
+				    |	++++++++++    ++++++++++ 
+				    ~~~ + host_D +    + host_E +
+					++++++++++    ++++++++++
+
+   
+  +====================================+
+  | request_id                         |  //
+  | command = open                     | /   response from
+  | filename                           | \   storage network
+  | r =                                |  \\
+  |    h = [ host_A, host_C, host_D ]  |
+  |    base = hash_0                   |
+  |    top  = hash_99                  |
+  +====================================+
+
+
+read()
+
+	first read          unicast
+  +=======================+           ++++++++++
+  | request_id            | - - - - > + host_A +
+  | command = read        |           ++++++++++ 
+  | request_hash = hash_0 |            ++++++++++
+  | step = 3              | - - - - -> + host_C +
+  +=======================+            ++++++++++
+                         |          ++++++++++
+                         + - - - -> + host_D +
+			            ++++++++++
+
+  response from each host
+
+  +=====================================+
+  | request_id                          |
+  | command = read                      |
+  | request_hash = hash_0               |
+  | host = host_A                       |
+  | r =                                 |
+  |   next = [ hash_1, hash_2, hash_3 ] |
+  |   data = base64( BLOB )             |
+  +====================================++
+
+  _read_merge()
+
+  merge the response to have
+
+  hash_1 => [ host_A, host_C ]
+  hash_2 => [ host_A, host_C, host_D ]
+  hash_3 => [ host_C, host_D ]
+
+ foreach hash_N send to random( length( host_array_in_the_response ) )
+
+			    unicast
+  +=======================+           ++++++++++
+  | request_id            | - - - - > + host_? +
+  | command = read        |           ++++++++++ 
+  | request_hash = hash_N |
+  | step = 3              |
+  +=======================+
+
+  GOTO _read_merge() until EOF
+
+  ??? EOF is when next is empty ???
