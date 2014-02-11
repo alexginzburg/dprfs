@@ -1,4 +1,6 @@
 -- file: ch27/syslogclient.hs
+-- apt-get install libghc-network-dev
+-- apt-get install libghc-network-multicast-dev
 import Data.Bits
 import Network.Socket
 import Network.BSD
