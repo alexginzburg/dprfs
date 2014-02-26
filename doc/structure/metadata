@@ -1,0 +1,14 @@
+Metadata should describe 
+ - latest version of a file
+ - permissions
+ - versions of data blocks of a file
+ - file size
+ - create, modify, access times
+ - file type ?
+
+  metadata for a file should be stored as a tree where each data block hash is a node.
+We should have a checksum of each edge, the checksum of all edges represents a current version of a file.
+when the branch occurs we shold (could) follow a git model and create a merge object. Merge object 
+is a collection of nodes with the same parent.
+
+
