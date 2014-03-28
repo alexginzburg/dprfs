@@ -29,6 +29,7 @@ openlog hostname port progname =
        -- Save off the socket, program name, and server address in a handle
        return $ SyslogHandle sock progname (addrAddress serveraddr)
 
+-- syslog s USER INFO "message"
 syslog :: SyslogHandle -> Facility -> Priority -> String -> IO ()
 syslog syslogh fac pri msg =
     sendstr sendmsg
@@ -41,6 +42,7 @@ syslog syslogh fac pri msg =
           sendstr [] = return ()
           sendstr omsg = do sent <- sendTo (slSocket syslogh) omsg
                                     (slAddress syslogh)
+          		    recvstr syslogh
                             sendstr (genericDrop sent omsg)
           
 closelog :: SyslogHandle -> IO ()
@@ -53,3 +55,18 @@ makeCode fac pri =
         pricode = fromEnum pri 
         in
           (faccode `shiftL` 3) .|. pricode
+
+-- receive data back
+recvstr :: SyslogHandle
+	-> IO ()
+recvstr sock = 
+	do 
+		(msg, _, addr) <- recvFrom (slSocket sock) 1024
+		plainHandler addr msg
+
+-- A simple handler that prints incoming packets
+plainHandler :: SockAddr
+	     -> String
+	     -> IO ()
+plainHandler addr msg = 
+    do putStrLn $ "From " ++ show addr ++ ": " ++ msg

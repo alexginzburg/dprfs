@@ -29,11 +29,22 @@ serveLog port handlerfunc = withSocketsDo $
               do -- Receive one UDP packet, maximum length 1024 bytes,
                  -- and save its content into msg and its source
                  -- IP and port into addr
-                 (msg, _, addr) <- recvFrom sock 1024
-                 -- Handle it
-                 handlerfunc addr msg
-                 -- And process more messages
-                 procMessages sock
+		(msg, _, addr) <- recvFrom sock 1024
+                -- Handle it
+                handlerfunc addr msg
+
+		sendstr ("pong-" ++ msg ) sock addr
+
+		-- process more
+		procMessages sock
+
+-- send data back
+sendstr :: String 
+	-> Socket
+	-> SockAddr
+	-> IO Int
+sendstr msg sock addr = 
+	sendTo sock msg addr
 
 -- A simple handler that prints incoming packets
 plainHandler :: HandlerFunc
