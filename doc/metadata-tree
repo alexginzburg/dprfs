@@ -1,0 +1,32 @@
+
+client-1
+a-b-c
+
+client-2
+a-e-f
+
+
+node state
+ /-b-c
+a
+ \-e-f
+
+==============
+client-1
+a-b-c
+
+client-2
+a-b-e
+
+node-state
+   /-c
+a-b
+   \-e
+
+
+meta-data tree
+-------
+filename
+ | 
+ | \ tree checksum_1. we should hash each edge. The HEAD is just a hash of a last edge
+ | \ tree checksum_2

@@ -67,3 +67,16 @@ node functions:
   authenticate with the storage network
   discover existing nodes
   
+
+Client node:
+	each client saves the mount points it has mounted + an address for each mount point.
+	discovery packet should have a
+		mount point
+		filename (optional)
+	during discovery step we don't really need to have a filename for a write operation
+	
+
+
+chunk_0
+ \
+  chunk_1

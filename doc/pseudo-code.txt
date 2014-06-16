@@ -1,0 +1,64 @@
+= means parallel execution
+> means process manager, waits for processes to finish or timeout
+
+open
+----
+
+get user access_key
+get min replica_count
+create transaction_id
+send multicast request
+	msg (
+		cmd_open
+		transaction_id
+		filename
+		userid
+		access_key
+		access_mode ( R, W, RW )
+	)
+wait until TTL or n_response == replica_count 
+	read response (
+		transaction_id
+		filename
+		HEAD
+		node_address
+	)
+file_structure (
+	filename
+	access_key
+	access_mode
+	HEAD
+	nodes [
+		node_address
+		node_address
+		node_address
+	]
+)
+	
+
+write
+-----
+
+given file_structure
+while chunk = read local_file
+
+	= process_chunk 
+		chunk_hash( chunk )
+		= send to node
+	  	  msg (
+			cmd_write
+			userid
+			filename
+			HEAD
+			parent_chunk
+			chunk_hash
+			data
+		  )
+		  wait for ack or retry until TTL
+		when ack_count => replica_count
+		  send multicast
+			msg (
+				cmd_commit
+				filename
+				chunk_hash
+			)
